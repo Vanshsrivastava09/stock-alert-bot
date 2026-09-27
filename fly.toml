@@ -1,0 +1,25 @@
+app = "stock-alert-bot"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  TELEGRAM_BOT_TOKEN = ""
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+[[services.tcp_checks]]
+  interval = 30000
+  timeout = 5000
+  grace_period = "5s"

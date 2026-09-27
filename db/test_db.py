@@ -10,10 +10,15 @@ def main():
     print("=" * 70)
     
     # Use a test database (local SQLite for testing)
-    # Force use of SQLite by removing DATABASE_URL if present
+    # Force use of SQLite by setting DATABASE_URL to None
+    original_db_url = os.environ.get('DATABASE_URL')
     if 'DATABASE_URL' in os.environ:
         del os.environ['DATABASE_URL']
     db = DatabaseManager('test_stock_alerts.db')
+    
+    # Restore original DATABASE_URL if it existed
+    if original_db_url:
+        os.environ['DATABASE_URL'] = original_db_url
     
     # Clean up any existing test data
     session = db.get_session()

@@ -57,6 +57,7 @@ This bot periodically checks product pages from supported e-commerce sites and s
 - **Background Monitoring**: Automatic checks every 10 minutes
 - **Database Persistence**: SQLite for local dev, PostgreSQL for production
 - **Multiple Site Support**: Domain-specific parsers for different e-commerce platforms
+- **Health Checks**: Flask-based health endpoint for deployment monitoring
 
 ## 📁 Project Structure
 
@@ -77,9 +78,9 @@ stock-alert-bot/
 │   ├── __init__.py
 │   ├── scraper.py          # Web scraping logic with pluggable parsers
 │   └── test_sites.py       # Scraper testing
-├── main.py                 # Single entrypoint (bot + scheduler)
-├── Procfile                # Railway deployment configuration
-├── runtime.txt             # Python version specification
+├── main.py                 # Single entrypoint (bot + scheduler + Flask health check)
+├── Dockerfile             # Docker configuration for Fly.io
+├── fly.toml               # Fly.io deployment configuration
 ├── requirements.txt        # Pinned Python dependencies
 ├── .env.example           # Environment variables template
 ├── .gitignore             # Git ignore patterns
@@ -174,69 +175,106 @@ python simulate_price_drop.py
 python scheduler/monitor.py
 ```
 
-## 🌐 Deploying to Railway
+## 🌐 Deploying to Fly.io (Free)
 
-### Option 1: Using Railway CLI
+Fly.io offers a generous free tier that's perfect for hosting Telegram bots with background processes.
 
-1. **Install Railway CLI**
+### Step 1: Install Fly.io CLI
+
+1. **Download Fly.io CLI** from [fly.io/docs/hands-on/install-flyctl/](https://fly.io/docs/hands-on/install-flyctl/)
+2. **For Windows:** Download the installer or use:
    ```bash
-   npm install -g @railway/cli
+   powershell -c "iwr https://fly.io/install.ps1 -useb | iex"
    ```
 
-2. **Login to Railway**
+### Step 2: Sign up and Login
+
+1. **Sign up** at [fly.io](https://fly.io)
+2. **Login** to your account:
    ```bash
-   railway login
+   flyctl auth login
    ```
 
-3. **Initialize Railway project**
+### Step 3: Create PostgreSQL Database
+
+1. **Create a new PostgreSQL database:**
    ```bash
-   railway init
+   flyctl postgres create --name stock-alert-db
    ```
 
-4. **Deploy**
+2. **Copy the connection string** provided by Fly.io (it will look like: `postgres://user:password@host:port/database`)
+
+### Step 4: Deploy the Application
+
+1. **Initialize the app:**
    ```bash
-   railway up
+   flyctl launch
    ```
 
-5. **Set environment variables**
+2. **Follow the prompts:**
+   - Enter an app name (e.g., `stock-alert-bot`)
+   - Select a region (choose closest to you)
+   - Skip creating a database (we already created one)
+   - Skip deploying for now
+
+3. **Attach the database:**
    ```bash
-   railway variables set TELEGRAM_BOT_TOKEN=your_token_here
+   flyctl postgres attach -a stock-alert-bot stock-alert-db
    ```
 
-### Option 2: Using Railway Dashboard (Click-by-Click)
+4. **Set environment variables:**
+   ```bash
+   flyctl secrets set TELEGRAM_BOT_TOKEN=your_bot_token_here -a stock-alert-bot
+   ```
 
-1. **Go to [Railway.app](https://railway.app)** and sign up/login
+5. **Deploy the app:**
+   ```bash
+   flyctl deploy -a stock-alert-bot
+   ```
 
-2. **Create a new project**
-   - Click "New Project"
-   - Select "Deploy from GitHub repo"
+### Step 5: Monitor and Test
 
-3. **Connect your GitHub repository**
-   - Click "Install GitHub App" if needed
-   - Select your `stock-alert-bot` repository
-   - Click "Deploy Now"
+1. **Check deployment status:**
+   ```bash
+   flyctl status -a stock-alert-bot
+   ```
 
-4. **Add environment variables**
-   - Go to your project → Variables tab
-   - Add `TELEGRAM_BOT_TOKEN` with your bot token
-   - Railway will automatically provide `DATABASE_URL` for PostgreSQL
+2. **View logs:**
+   ```bash
+   flyctl logs -a stock-alert-bot
+   ```
 
-5. **Monitor deployment**
-   - Watch the deployment logs in the "Deployments" tab
-   - Once deployed, you'll see a live URL
+3. **Test the bot** by sending `/start` in Telegram
 
-6. **Test the deployed bot**
-   - Send `/start` to your bot in Telegram
-   - Try tracking a product with `/track <url>`
+### Fly.io Free Tier Benefits
 
-### Railway Environment Variables
+- **Free:** Up to 3 VMs with 256MB RAM each
+- **Always On:** Apps run 24/7 (no sleep)
+- **Global:** Deploy to multiple regions
+- **Database:** Free PostgreSQL instance (1GB)
+- **Background Processes:** Perfect for schedulers
 
-Required:
-- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token from BotFather
+### Alternative: Replit (Simpler)
 
-Automatically provided by Railway:
-- `DATABASE_URL` - PostgreSQL connection string (Railway provides this)
-- `PORT` - Port for the web service
+If Fly.io seems complex, you can also use Replit:
+
+1. Go to [replit.com](https://replit.com)
+2. Create a new Python Repl
+3. Import your GitHub repository
+4. Add `TELEGRAM_BOT_TOKEN` in Secrets
+5. Run `python main.py`
+6. Click "Keep Always On" in the top-right corner
+
+### Database Configuration
+
+**Local Development (SQLite)**:
+- By default, the bot uses SQLite (`stock_alerts.db`)
+- No additional configuration needed
+
+**Production (PostgreSQL)**:
+- Fly.io automatically provides PostgreSQL
+- Set `DATABASE_URL` environment variable
+- The bot will automatically use PostgreSQL when `DATABASE_URL` is present
 
 ## 🔧 Configuration
 
@@ -291,18 +329,18 @@ To add support for a new e-commerce domain:
 2. **Test locally** with `python main.py`
 3. **Commit changes** with descriptive messages
 4. **Push to GitHub**
-5. **Railway auto-deploys** on push
+5. **Deploy to Fly.io** (free tier)
 
 ## 🐛 Troubleshooting
 
 ### Bot doesn't respond
 - Check that `TELEGRAM_BOT_TOKEN` is set correctly
 - Verify the bot token is valid (try sending a message via BotFather)
-- Check Railway logs for errors
+- Check Fly.io logs: `flyctl logs -a stock-alert-bot`
 
 ### Database connection issues
-- Ensure `DATABASE_URL` is set in Railway
-- Check Railway PostgreSQL service is running
+- Ensure `DATABASE_URL` is set in Fly.io secrets
+- Check Fly.io PostgreSQL service is running
 - Verify database schema is created correctly
 
 ### Scraper fails to extract data

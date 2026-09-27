@@ -23,7 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Initialize database (use same DB as bot)
-# Will use DATABASE_URL if set (Render), otherwise SQLite
+# Will use DATABASE_URL if set (Fly.io), otherwise SQLite
 db = DatabaseManager()
 
 # Get bot token for sending messages

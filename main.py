@@ -2,6 +2,8 @@ import os
 import sys
 import logging
 import signal
+import asyncio
+from flask import Flask
 from dotenv import load_dotenv
 
 # Add current directory to path for imports
@@ -19,6 +21,19 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Create Flask app for health checks
+app = Flask(__name__)
+
+@app.route('/health')
+def health():
+    """Health check endpoint for deployment platforms."""
+    return {"status": "healthy"}, 200
+
+@app.route('/')
+def index():
+    """Root endpoint."""
+    return {"status": "Stock Alert Bot is running"}, 200
 
 
 def signal_handler(sig, frame):
@@ -58,13 +73,22 @@ def main():
         logger.error("❌ Failed to create bot application")
         return
     
+    # Run the bot in a separate thread
+    import threading
+    bot_thread = threading.Thread(target=lambda: application.run_polling(allowed_updates=None))
+    bot_thread.daemon = True
+    bot_thread.start()
+    
     # Run the bot
     logger.info("✅ Bot and scheduler started successfully!")
     logger.info("📊 Scheduler will check products every 10 minutes")
+    logger.info("🌐 Health check available at /health")
     logger.info("Press Ctrl+C to stop")
     
+    # Run Flask app for health checks
     try:
-        application.run_polling(allowed_updates=None)
+        port = int(os.getenv('PORT', 8080))
+        app.run(host='0.0.0.0', port=port)
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down...")
     finally:

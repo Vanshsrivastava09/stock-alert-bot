@@ -40,12 +40,12 @@ class Subscription(Base):
 
 
 def init_db(db_path='stock_alerts.db'):
-    # Check for DATABASE_URL environment variable (Render PostgreSQL)
+    # Check for DATABASE_URL environment variable (Fly.io PostgreSQL)
     database_url = os.getenv('DATABASE_URL')
     
     if database_url:
-        # Use PostgreSQL (Render)
-        engine = create_engine(database_url)
+        # Use PostgreSQL (Fly.io) with proper connection pooling
+        engine = create_engine(database_url, pool_pre_ping=True, pool_recycle=3600)
     else:
         # Use SQLite (local development)
         engine = create_engine(f'sqlite:///{db_path}')

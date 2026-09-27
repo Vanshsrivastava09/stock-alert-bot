@@ -8,9 +8,14 @@ def main():
     print("Setting up test data for scheduler testing...")
     
     # Force use of SQLite for testing
+    original_db_url = os.environ.get('DATABASE_URL')
     if 'DATABASE_URL' in os.environ:
         del os.environ['DATABASE_URL']
     db = DatabaseManager('test_stock_alerts.db')
+    
+    # Restore original DATABASE_URL if it existed
+    if original_db_url:
+        os.environ['DATABASE_URL'] = original_db_url
     
     # Clean up any existing test data
     session = db.get_session()

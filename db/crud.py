@@ -6,7 +6,7 @@ from datetime import datetime
 
 class DatabaseManager:
     def __init__(self, db_path='stock_alerts.db'):
-        # Check for DATABASE_URL environment variable (Render PostgreSQL)
+        # Check for DATABASE_URL environment variable (Fly.io PostgreSQL)
         database_url = os.getenv('DATABASE_URL')
         if database_url:
             self.engine = init_db()  # Will use DATABASE_URL
